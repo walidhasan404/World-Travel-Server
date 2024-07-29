@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-
 const { ObjectId } = require('mongodb');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const app = express();
@@ -38,6 +37,11 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/spotsSample', async (req, res) => {
+      const result = await spotsCollection.aggregate([{ $sample: { size: 6 } }]).toArray();
+      res.send(result);
+    });
+
     app.get('/spot/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
@@ -47,7 +51,6 @@ async function run() {
 
     app.post('/spots', async (req, res) => {
       const newTouristsSpot = req.body;
-      console.log(newTouristsSpot);
       const result = await spotsCollection.insertOne(newTouristsSpot);
       res.send(result);
     })
