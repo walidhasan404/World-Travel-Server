@@ -29,7 +29,7 @@ async function run() {
     // await client.connect();
 
     const spotsCollection = client.db('spotDB').collection('spot');
-    const myspotsCollection = client.db('spotDB').collection('spot');
+    const myspotsCollection = client.db('spotDB').collection('myspots');
 
     app.get('/spots', async (req, res) => {
       const cursor = spotsCollection.find();
@@ -51,7 +51,22 @@ async function run() {
 
     app.post('/spots', async (req, res) => {
       const newTouristsSpot = req.body;
-      const result = await spotsCollection.insertOne(newTouristsSpot);
+      const result = await myspotsCollection.insertOne(newTouristsSpot);
+      res.send(result);
+    })
+
+    app.get('/spots/user/:email', async (req, res) => {
+      const userEmail = req.params.email;
+      const query = { user_email: userEmail };
+      const cursor = myspotsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get('/spots/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await myspotsCollection.findOne(query);
       res.send(result);
     })
 
@@ -59,7 +74,7 @@ async function run() {
       try {
         const countryName = req.params.countryName;
         const query = { country_Name: countryName };
-        const cursor = myspotsCollection.find(query);
+        const cursor = spotsCollection.find(query);
         const result = await cursor.toArray();
         res.send(result);
       } catch (error) {
@@ -68,14 +83,23 @@ async function run() {
       }
     });
 
-    app.delete('/spot/:id', async (req, res) => {
+    app.delete('/spots/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
-      const result = myspotsCollection.deleteOne(query);
-      res.send(result);
-    })
+      try {
+        const result = await myspotsCollection.deleteOne(query);
+        if (result.deletedCount === 1) {
+          res.status(200).send({ success: true, message: "Spot deleted successfully" });
+        } else {
+          res.status(404).send({ success: false, message: "Spot not found" });
+        }
+      } catch (error) {
+        res.status(500).send({ success: false, message: "Failed to delete spot", error });
+      }
+    });
 
-    app.put('/spot/:id', async (req, res) => {
+
+    app.put('/spots/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) }
       const options = { upsert: true };
@@ -94,11 +118,17 @@ async function run() {
           user_name: updatedSpot.user_name,
           photo: updatedSpot.photo
         }
-      }
+      };
 
-      const result = await myspotsCollection.updateOne(filter, spot, options);
-      res.send(result);
-    })
+      try {
+        const result = await myspotsCollection.updateOne(filter, spot, options);
+        console.log('Update Result:', result);
+        res.send(result);
+      } catch (error) {
+        console.error('Update Error:', error);
+        res.status(500).send('Failed to update spot');
+      }
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
